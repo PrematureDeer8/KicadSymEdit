@@ -14,16 +14,37 @@ class KicadSexpr(SexpParser):
         # string attributes
         self._str_attr = KicadSexpr.getattribute(symbol_str);
         self._raw_sym_str = symbol_str;
+        # this if statement implies that their are some invalid keys
         if(set(kwargs.keys()) != self._str_attr):
             # XOR to get the missing keys
-            missing_keys = self._str_attr ^ set(kwargs.keys());
-            raise ValueError(f"Missing keys:\n {missing_keys}");
+            invalid_keys = self._str_attr ^ set(kwargs.keys());
+            missing_keys = self._str_attr & invalid_keys;
+            wrong_keys = invalid_keys - missing_keys;
+            if(missing_keys != set()):
+                raise ValueError(f"Missing keys:\n {missing_keys}");
+            else:
+                raise ValueError(f"Invalid keys:\n {wrong_keys}");
 
         # formatted symbol string
         self._symbol_str = symbol_str.format(**kwargs);
 
         # convert the symbol string into sexpr object
         super().__init__(parseSexp(self._symbol_str));
+        # set the action to overwrite for entire sexp hierarchy
+        KicadSexpr.setaction(self, Sexp.OVERWRITE);
+
+    
+    # recursively set the action of every element below the sexp object
+    @staticmethod
+    def setaction(obj : object, action: int):
+        if(isinstance(obj, SexpParser)):
+            obj._action = action;
+            for value in obj._value.values():
+                KicadSexpr.setaction(value, action);
+        
+        return;
+            
+
 
     # return all attributes of the format string
     @staticmethod
@@ -32,33 +53,39 @@ class KicadSexpr(SexpParser):
     
 
 class Pin(KicadSexpr):
+    _str = pin;
     def __init__(self, **kwargs) -> None:
-        self._str = pin;
         # default settings for Pin class 
         # NOTE: not all settings are listed
-        default = {"graphic_style": "line", 
+        self._default = {"graphic_style": "line", 
                    "orientation": 0, 
                    "length": 5.08, 
                    "name_size_x": 1.27, 
                    "name_size_y": 1.27,
                    "number_size_x": 1.27,
                    "number_size_y": 1.27};
-        default = pd.Series(default);
+        self._default = pd.Series(self._default);
         # get the mising the default keys
-        missing_default_keys = ((set(kwargs.keys()) ^ set(default.keys())) & set(default.keys()));
-        kwargs = dict(pd.concat([pd.Series(kwargs), default[list(missing_default_keys)]]));
+        missing_default_keys = ((set(kwargs.keys()) ^ set(self._default.keys())) & set(self._default.keys()));
+        kwargs = dict(pd.concat([pd.Series(kwargs), self._default[list(missing_default_keys)]]));
         super().__init__(self._str, **kwargs);
+    @staticmethod
+    def getattribute() -> set:
+        return KicadSexpr.getattribute(Pin._str);
 
 class Rectangle(KicadSexpr):
+    _str = rectangle;
     def __init__(self, **kwargs) -> None:
         # NOTE: grandparent class SexpParser intercepts this assignment 
         # because __setrattr__ operation was overloaded to treat this assignment
         # as an sexp object 
         # to bypass that overload use _varname infront of any attribute assignment
-        self._str = rectangle;
-        default = {"stroke_width": 0, "stroke_type": "solid", "fill_type": "background"};
-        default = pd.Series(default);
+        self._default = {"stroke_width": 0, "stroke_type": "solid", "fill_type": "background"};
+        self._default = pd.Series(self._default);
         # get the mising the default keys
-        missing_default_keys = ((set(kwargs.keys()) ^ set(default.keys())) & set(default.keys()));
-        kwargs = dict(pd.concat([pd.Series(kwargs), default[list(missing_default_keys)]]));
+        missing_default_keys = ((set(kwargs.keys()) ^ set(self._default.keys())) & set(self._default.keys()));
+        kwargs = dict(pd.concat([pd.Series(kwargs), self._default[list(missing_default_keys)]]));
         super().__init__(self._str, **kwargs);
+    @staticmethod
+    def getattribute() -> set:
+        return KicadSexpr.getattribute(Rectangle._str);
