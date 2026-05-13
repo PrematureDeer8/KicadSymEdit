@@ -89,3 +89,10 @@ class Rectangle(KicadSexpr):
     @staticmethod
     def getattribute() -> set:
         return KicadSexpr.getattribute(Rectangle._str);
+
+class Symbol(KicadSexpr):
+    # In Kicad the sym_name ending with a _# is the unit number!
+    _str = '(symbol "{sym_name}")';
+    def __init__(self, **kwargs) -> None:
+        # NOTE: action is set to Sexp.OVERWRITE by default
+        super().__init__(self._str, **kwargs)
